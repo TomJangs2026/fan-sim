@@ -1,0 +1,13 @@
+# Render Blueprint. Render 대시보드에서 "New +" -> "Blueprint"로 이 GitHub 저장소를 연결하면
+# 아래 서비스를 자동으로 인식해서 배포 설정을 만들어준다.
+# scraper-server는 PORT 환경변수를 그대로 읽으므로(index.js 참고) 코드 수정 없이 그대로 배포된다.
+services:
+  - type: web
+    name: fan-sim-scraper
+    runtime: node
+    plan: free
+    rootDir: packages/backend/scraper-server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
