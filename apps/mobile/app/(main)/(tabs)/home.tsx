@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   GameSchedule,
@@ -23,6 +23,7 @@ import LeagueSelector, { GROUP_VALUE_PREFIX } from '../../../src/components/orga
 import ScheduleTabs, { ScheduleTab } from '../../../src/components/organisms/ScheduleTabs';
 import GameScheduleItem from '../../../src/components/organisms/GameScheduleItem';
 import StandingsModal from '../../../src/components/organisms/StandingsModal';
+import GameDetailModal from '../../../src/components/organisms/GameDetailModal';
 import AppText from '../../../src/components/atoms/AppText';
 
 function monthRange(dateStr: string) {
@@ -48,17 +49,26 @@ function monthDiffFromToday(dateStr: string) {
 
 export default function HomeScreen() {
   const selectedDate = useAppStore((s) => s.selectedDate);
-  // 엑셀 재업로드 시 bumpDataVersion()으로 올라가는 카운터. 의존성에 넣어두면 화면을
-  // 새로 열지 않아도 바뀐 팀/선수/일정이 바로 반영된다.
+  // 엑셀 재업로드나 새로고침(수동 버튼/당겨서 새로고침/자동 갱신) 때마다 bumpDataVersion()으로
+  // 올라가는 카운터. 의존성에 넣어두면 화면을 새로 열지 않아도 최신 데이터를 다시 불러온다.
   const dataVersion = useAppStore((s) => s.dataVersion);
+  const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
   const [games, setGames] = useState<GameSchedule[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [standingsGame, setStandingsGame] = useState<{ sport: Sport; leagueId: string } | null>(null);
+  const [detailGame, setDetailGame] = useState<GameSchedule | null>(null);
   const [tab, setTab] = useState<ScheduleTab>('today');
   const [selectedLeague, setSelectedLeague] = useState<string | 'all'>('all');
   const [selectedCountry, setSelectedCountry] = useState<string | 'all'>('all');
+
+  // 경기가 실시간으로 진행 중일 수 있어서 1분마다 자동으로 새로고침한다.
+  useEffect(() => {
+    const id = setInterval(() => bumpDataVersion(), 60_000);
+    return () => clearInterval(id);
+  }, [bumpDataVersion]);
 
   useEffect(() => {
     getTeams().then(setTeams);
@@ -69,8 +79,16 @@ export default function HomeScreen() {
     const { start, end } = monthRange(selectedDate);
     // 이번달 전체를 가져와두면 탭 전환 시 재요청 없이 필터링만으로 오늘/어제/지난/예정을 보여줄 수 있고,
     // "최근 5경기" 승무패 계산에도 이 데이터를 재사용한다.
-    getScheduleInRange(start, end).then(setGames);
+    getScheduleInRange(start, end).then((next) => {
+      setGames(next);
+      setRefreshing(false);
+    });
   }, [selectedDate, dataVersion]);
+
+  function handlePullToRefresh() {
+    setRefreshing(true);
+    bumpDataVersion();
+  }
 
   const todayStr = toLocalDateStr(new Date());
   const yesterdayStr = addDays(todayStr, -1);
@@ -137,6 +155,7 @@ export default function HomeScreen() {
         data={displayedGames}
         keyExtractor={(g) => g.id}
         contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handlePullToRefresh} />}
         ListHeaderComponent={
           <View>
             <WeeklyBanner />
@@ -157,6 +176,7 @@ export default function HomeScreen() {
             teamById={teamById}
             playerById={playerById}
             onOpenStandings={() => setStandingsGame({ sport: item.sport, leagueId: item.leagueId })}
+            onOpenDetail={() => setDetailGame(item)}
           />
         )}
       />
@@ -170,6 +190,10 @@ export default function HomeScreen() {
           allGames={games}
           onClose={() => setStandingsGame(null)}
         />
+      )}
+
+      {detailGame && (
+        <GameDetailModal visible={!!detailGame} game={detailGame} teamById={teamById} onClose={() => setDetailGame(null)} />
       )}
     </SafeAreaView>
   );

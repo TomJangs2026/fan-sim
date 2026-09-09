@@ -16,6 +16,7 @@ interface Props {
   teamById: Map<string, Team>;
   playerById: Map<string, Player>;
   onOpenStandings: () => void;
+  onOpenDetail: () => void;
 }
 
 function statusLabel(game: GameSchedule) {
@@ -127,7 +128,7 @@ function TeamRow({
   );
 }
 
-export default function GameScheduleItem({ game, allGames, teamById, playerById, onOpenStandings }: Props) {
+export default function GameScheduleItem({ game, allGames, teamById, playerById, onOpenStandings, onOpenDetail }: Props) {
   const [standings, setStandings] = useState<StandingEntry[]>([]);
   const dataVersion = useAppStore((s) => s.dataVersion);
 
@@ -198,7 +199,7 @@ export default function GameScheduleItem({ game, allGames, teamById, playerById,
       };
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onOpenDetail} activeOpacity={0.7}>
       {/* 1줄 */}
       <View style={styles.topRow}>
         <RoundLabel label={SPORT_LABEL[game.sport]} backgroundColor="#1D4ED8" textColor="#fff" />
@@ -239,7 +240,7 @@ export default function GameScheduleItem({ game, allGames, teamById, playerById,
         form={row3.form}
         rightSlot={<TvBroadcastLink name={game.tvBroadcastName} url={game.tvBroadcastUrl} />}
       />
-    </View>
+    </TouchableOpacity>
   );
 }
 

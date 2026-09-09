@@ -17,6 +17,9 @@ const SEASON_CACHE_TTL_MS = 60 * 60_000; // 시즌 코드는 하루에도 거의
 const standingsCache = new Map(); // leagueId -> { at, data }
 const seasonCodeCache = new Map(); // categoryId -> { at, seasonCode }
 
+const GAME_DETAIL_CACHE_TTL_MS = 20_000;
+const gameDetailCache = new Map(); // gameId -> { at, data }
+
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -247,6 +250,84 @@ async function getLeagueStandings(leagueId) {
 app.get('/api/standings', async (req, res) => {
   const leagueId = String(req.query.leagueId || '');
   const { status, body } = await getLeagueStandings(leagueId);
+  res.status(status).json(body);
+});
+
+/**
+ * 경기 상세(득점자 + 라인업). 축구 전용 — 네이버 게임센터가 쓰는 두 엔드포인트를 합쳐서 준다.
+ *   - /schedule/games/{gameId}/game-polling : 스코어/득점자(scorers)
+ *   - /schedule/games/{gameId}/lineup       : 선발/교체/감독
+ * 선수는 네이버 playerId/이름을 그대로 내려준다 — 우리 팀/선수 로스터와 매칭하지 않는다
+ * (상대팀 선수까지 전부 로스터에 등록해둘 수 없으므로).
+ */
+function refineLineupPlayer(p, isStarter) {
+  return {
+    playerId: String(p.playerId),
+    name: p.name,
+    shirtNumber: String(p.shirtNumber ?? ''),
+    position: p.pos || '',
+    isStarter,
+    substituted: !!p.changed,
+    goals: p.goal || 0,
+    assists: p.assists || 0,
+    yellowCards: p.yellowCardCnt || 0,
+    redCards: p.redCardCnt || 0,
+  };
+}
+
+function refineLineupSide(lineupSide, subsSide, managerName) {
+  const starters = (lineupSide?.players || []).flat().map((p) => refineLineupPlayer(p, true));
+  const substitutes = (subsSide || []).map((p) => refineLineupPlayer(p, false));
+  if (starters.length === 0 && substitutes.length === 0) return null;
+  return { manager: managerName || undefined, starters, substitutes };
+}
+
+async function getGameDetail(gameId) {
+  const cached = gameDetailCache.get(gameId);
+  if (cached && Date.now() - cached.at < GAME_DETAIL_CACHE_TTL_MS) {
+    return { status: 200, body: { success: true, gameId, cached: true, data: cached.data } };
+  }
+
+  try {
+    const [pollingRes, lineupRes] = await Promise.all([
+      axios.get(`https://api-gw.sports.naver.com/schedule/games/${encodeURIComponent(gameId)}/game-polling`, {
+        timeout: 5000,
+        headers: { 'User-Agent': UA },
+      }),
+      axios
+        .get(`https://api-gw.sports.naver.com/schedule/games/${encodeURIComponent(gameId)}/lineup`, {
+          timeout: 5000,
+          headers: { 'User-Agent': UA },
+        })
+        .catch(() => null), // 라인업이 아직 안 나왔을 수 있음(경기 전) — 실패해도 득점자 정보는 보여준다
+    ]);
+
+    const scorersRaw = pollingRes.data?.result?.game?.scorers || { home: [], away: [] };
+    const scorers = [
+      ...(scorersRaw.home || []).map((s) => ({ team: 'home', playerName: s.playerName, minute: s.time, addedTime: s.addedTime || 0, ownGoal: !!s.ownGoal })),
+      ...(scorersRaw.away || []).map((s) => ({ team: 'away', playerName: s.playerName, minute: s.time, addedTime: s.addedTime || 0, ownGoal: !!s.ownGoal })),
+    ].sort((a, b) => a.minute - b.minute || a.addedTime - b.addedTime);
+
+    const lu = lineupRes?.data?.result?.lineUpData;
+    const data = {
+      gameId,
+      scorers,
+      homeLineup: lu ? refineLineupSide(lu.lineup?.home, lu.substitution?.home, lu.manager?.home) : null,
+      awayLineup: lu ? refineLineupSide(lu.lineup?.away, lu.substitution?.away, lu.manager?.away) : null,
+    };
+
+    gameDetailCache.set(gameId, { at: Date.now(), data });
+    return { status: 200, body: { success: true, gameId, cached: false, data } };
+  } catch (error) {
+    console.error(`[game-detail:${gameId}] fetch failed:`, error.message);
+    return { status: 502, body: { success: false, message: '경기 상세 정보를 가져오는데 실패했습니다.' } };
+  }
+}
+
+app.get('/api/game-detail', async (req, res) => {
+  const gameId = String(req.query.gameId || '');
+  if (!gameId) return res.status(400).json({ success: false, message: 'gameId가 필요합니다.' });
+  const { status, body } = await getGameDetail(gameId);
   res.status(status).json(body);
 });
 

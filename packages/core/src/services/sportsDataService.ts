@@ -1,6 +1,6 @@
-import { GameSchedule, Player, Sport, StandingEntry, Team } from '../types';
+import { GameDetail, GameSchedule, Player, Sport, StandingEntry, Team } from '../types';
 import { generateMockSchedule, generateMockStandings } from './mock/schedule';
-import { fetchScheduleFromNaverProxy, fetchStandingsFromNaverProxy } from './naverSportsAdapter';
+import { fetchGameDetailFromNaverProxy, fetchScheduleFromNaverProxy, fetchStandingsFromNaverProxy } from './naverSportsAdapter';
 import { getAllLeagues } from './leagueRegistry';
 import { getEffectiveTeams, getEffectivePlayers, getEffectiveTeamsByLeague } from './teamPlayerStore';
 
@@ -155,4 +155,12 @@ export async function getStandings(sport: Sport, leagueId?: string): Promise<Sta
 
   const leagueTeamIds = new Set((await getEffectiveTeamsByLeague(leagueId)).map((t) => t.id));
   return mockStandings.filter((s) => leagueTeamIds.has(s.teamId));
+}
+
+/**
+ * 경기 하나의 득점자/라인업. gameId는 실제 네이버 gameId(GameSchedule.id에서 "naver-" 뗀 값)여야
+ * 하고, mock 경기(실제 gameId가 없음)나 서버가 꺼져 있으면 null을 반환한다.
+ */
+export async function getGameDetail(gameId: string): Promise<GameDetail | null> {
+  return fetchGameDetailFromNaverProxy(gameId);
 }

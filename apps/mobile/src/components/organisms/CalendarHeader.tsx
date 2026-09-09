@@ -17,6 +17,7 @@ export default function CalendarHeader() {
   const setSelectedDate = useAppStore((s) => s.setSelectedDate);
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
+  const bumpDataVersion = useAppStore((s) => s.bumpDataVersion);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const year = Number(selectedDate.slice(0, 4));
@@ -35,6 +36,10 @@ export default function CalendarHeader() {
         <NumericText style={styles.year}>{year}</NumericText>
         <AppText style={styles.today}>{formatToday(today)}</AppText>
         <AppText style={styles.calendarIcon}>📅</AppText>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.refreshBtn} onPress={() => bumpDataVersion()} hitSlop={8}>
+        <AppText style={styles.refreshIcon}>🔄</AppText>
       </TouchableOpacity>
 
       <View style={styles.rightGroup}>
@@ -93,6 +98,8 @@ const styles = StyleSheet.create({
   year: { fontSize: 13, color: '#999' },
   today: { fontSize: 15, fontWeight: '700' },
   calendarIcon: { fontSize: 14 },
+  refreshBtn: { padding: 6 },
+  refreshIcon: { fontSize: 16 },
   toggleGroup: { flexDirection: 'row', backgroundColor: '#F1F1F1', borderRadius: 16, padding: 2 },
   toggleBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14 },
   toggleBtnActive: { backgroundColor: '#1D4ED8' },

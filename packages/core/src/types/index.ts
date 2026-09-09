@@ -98,6 +98,42 @@ export interface LeagueZoneConfig {
   relegation?: LeagueZoneRange;
 }
 
+/** 경기 상세(득점자/라인업)의 선수 한 명. 네이버가 주는 선수 id/이름을 그대로 쓰고 우리 로스터와 매칭하지 않는다. */
+export interface LineupPlayer {
+  playerId: string;
+  name: string;
+  shirtNumber: string;
+  position: string; // GK/DF/MF/FW 등
+  isStarter: boolean;
+  substituted: boolean; // 경기 중 교체되어 나갔는지
+  goals: number;
+  assists: number;
+  yellowCards: number;
+  redCards: number;
+}
+
+export interface GameLineup {
+  manager?: string;
+  starters: LineupPlayer[];
+  substitutes: LineupPlayer[];
+}
+
+export interface GoalScorer {
+  team: 'home' | 'away';
+  playerName: string;
+  minute: number;
+  addedTime: number;
+  ownGoal: boolean;
+}
+
+/** GameScheduleItem에서 경기를 탭하면 보여주는 상세 정보. 축구만 지원(야구는 골/라인업 개념이 달라서 제외). */
+export interface GameDetail {
+  gameId: string;
+  scorers: GoalScorer[]; // 시간순 정렬
+  homeLineup?: GameLineup | null;
+  awayLineup?: GameLineup | null;
+}
+
 export type AuthProvider = 'kakao' | 'google' | 'apple';
 
 export interface UserSession {

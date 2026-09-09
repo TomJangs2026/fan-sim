@@ -1,4 +1,4 @@
-import { GameSchedule, GameStatus, StandingEntry } from '../types';
+import { GameDetail, GameSchedule, GameStatus, StandingEntry } from '../types';
 import { LEAGUE_REGISTRY } from './leagueRegistry';
 import { getEffectiveTeamsByLeague } from './teamPlayerStore';
 import { getProxiedImageUrl } from './teamLogo';
@@ -183,5 +183,26 @@ export async function fetchStandingsFromNaverProxy(leagueId: string): Promise<St
   } catch (e) {
     console.warn(`[naverSportsAdapter] standings fetch failed for ${leagueId}, falling back to mock:`, e);
     return [];
+  }
+}
+
+/**
+ * 경기 하나의 상세(득점자 + 라인업)를 가져온다. gameId는 네이버 원본 gameId
+ * (GameSchedule.id의 "naver-" 접두어를 뗀 값)여야 한다 — mock 경기는 실제 gameId가 없어서 호출할 수 없다.
+ * 선수는 우리 로스터와 매칭하지 않고 네이버가 준 이름/포지션을 그대로 쓴다.
+ * 서버가 꺼져 있거나 실패하거나 아직 라인업/득점 정보가 없으면(경기 전 등) null을 반환한다.
+ */
+export async function fetchGameDetailFromNaverProxy(gameId: string): Promise<GameDetail | null> {
+  try {
+    const res = await fetch(`${SCRAPER_BASE_URL}/api/game-detail?gameId=${encodeURIComponent(gameId)}`);
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    if (!json.success) return null;
+
+    return json.data as GameDetail;
+  } catch (e) {
+    console.warn(`[naverSportsAdapter] game detail fetch failed for ${gameId}:`, e);
+    return null;
   }
 }
