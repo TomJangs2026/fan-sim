@@ -10,13 +10,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_SCRAPER_URL": "https://REPLACE-WITH-YOUR-RENDER-URL.onrender.com"
+        "EXPO_PUBLIC_SCRAPER_URL": "https://fan-sim-scraper.onrender.com"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_SCRAPER_URL": "https://REPLACE-WITH-YOUR-RENDER-URL.onrender.com"
+        "EXPO_PUBLIC_SCRAPER_URL": "https://fan-sim-scraper.onrender.com"
       }
     }
   },
