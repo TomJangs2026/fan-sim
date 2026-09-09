@@ -102,6 +102,10 @@ function refineGame(g) {
     stadium: g.stadium,
     status: g.statusCode,
     statusDesc: g.statusInfo,
+    // 라운드/매치데이 번호(K리그는 숫자, 챔스는 문자열로 오는 등 타입이 섞여 있어서 문자열로 통일).
+    round: g.matchRound != null && g.matchRound !== '' ? String(g.matchRound) : null,
+    // 챔피언스리그 등 UEFA 대회에서 'LEAGUE'(리그 페이즈) 같은 값. 국내/유럽 개별 리그는 보통 null.
+    phaseCode: g.phaseCode || null,
     homeTeamCode: g.homeTeamCode,
     homeTeamName: g.homeTeamName,
     homeScore: g.homeTeamScore ?? null,

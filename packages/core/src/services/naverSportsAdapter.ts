@@ -53,6 +53,8 @@ interface NaverGameRaw {
   awayScore: number | null;
   awayStarter: string | null;
   awayEmblemUrl: string | null;
+  round: string | null;
+  phaseCode: string | null;
   broadcastChannel: string | null;
 }
 
@@ -103,6 +105,8 @@ export async function fetchScheduleFromNaverProxy(leagueId: string, date: string
           status: resolveStatus(g.status, g.statusDesc),
           stadium: g.stadium,
           liveState: g.status !== 'BEFORE' && g.status !== 'RESULT' ? { label: g.statusDesc } : undefined,
+          round: g.round ?? undefined,
+          phaseCode: g.phaseCode ?? undefined,
           // 로스터에 없는 쪽은 실제 팀 id가 없으니, 절대 우리 팀 id와 안 겹치는 임시 id를 넣고
           // (teamById.get()이 undefined를 돌려주게) 이름/로고는 homeTeamName 등 폴백 필드로 보여준다.
           homeTeamId: homeTeamId ?? `naver-team-${g.homeTeamCode}`,

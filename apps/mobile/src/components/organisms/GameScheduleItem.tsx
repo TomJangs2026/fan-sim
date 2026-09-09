@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { GameSchedule, Player, StandingEntry, Team, getStandings, toLocalDateStr, useAppStore } from '@fan-sim/core';
+import { GameSchedule, LEAGUE_REGISTRY, Player, StandingEntry, Team, getStandings, toLocalDateStr, useAppStore } from '@fan-sim/core';
 import AppText from '../atoms/AppText';
 import NumericText from '../atoms/NumericText';
 import RoundLabel from '../atoms/RoundLabel';
@@ -29,6 +29,18 @@ function statusColors(game: GameSchedule): { backgroundColor: string; textColor:
   if (game.status === 'live') return { backgroundColor: '#FEE2E2', textColor: '#DC2626' };
   if (game.status === 'cancelled') return { backgroundColor: '#F3F4F6', textColor: '#9CA3AF' };
   return { backgroundColor: '#F1F5F9', textColor: '#555' };
+}
+
+// UEFA 클럽대항전은 "n라운드" 대신 "페이즈 n"으로 부르는 게 자연스러워서 따로 구분한다.
+const UEFA_CUP_LEAGUE_IDS = new Set(['champs', 'europa', 'uecl']);
+
+// 1줄 중앙 제목 (예: "프리미어리그 3라운드", "UEFA 챔피언스리그 페이즈 1").
+// round는 실제 API(scraper-server)에서만 오고 mock 데이터엔 없어서, 그런 경우엔 안 보인다.
+function roundTitle(game: GameSchedule): string | null {
+  if (!game.round) return null;
+  const leagueLabel = LEAGUE_REGISTRY[game.leagueId]?.label ?? '';
+  if (UEFA_CUP_LEAGUE_IDS.has(game.leagueId)) return `${leagueLabel} 페이즈 ${game.round}`;
+  return `${leagueLabel} ${game.round}라운드`;
 }
 
 function timeOrDateLabel(game: GameSchedule) {
@@ -192,8 +204,8 @@ export default function GameScheduleItem({ game, allGames, teamById, playerById,
         <RoundLabel label={SPORT_LABEL[game.sport]} backgroundColor="#1D4ED8" textColor="#fff" />
         <NumericText style={styles.time}>{timeOrDateLabel(game)}</NumericText>
         <RoundLabel label={statusLabel(game)} backgroundColor={statusColors(game).backgroundColor} textColor={statusColors(game).textColor} />
-        <AppText style={styles.highlight} numberOfLines={1}>
-          {game.highlight ?? ''}
+        <AppText style={[styles.highlight, !game.highlight && styles.roundTitleText]} numberOfLines={1}>
+          {game.highlight ?? roundTitle(game) ?? ''}
         </AppText>
         <TouchableOpacity onPress={onOpenStandings} style={styles.standingsBtn}>
           <AppText style={styles.standingsIcon}>🏆</AppText>
@@ -235,7 +247,9 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 14, padding: 12, marginBottom: 10, elevation: 1 },
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   time: { fontSize: 12, color: '#666' },
-  highlight: { flex: 1, fontSize: 12, color: '#EA580C', fontWeight: '600' },
+  highlight: { flex: 1, fontSize: 12, color: '#EA580C', fontWeight: '600', textAlign: 'center' },
+  // 관전포인트(game.highlight)가 없을 때 라운드/페이즈 제목을 대신 보여줄 때 쓰는, 덜 튀는 색.
+  roundTitleText: { color: '#6B7280', fontWeight: '600' },
   standingsBtn: { padding: 4 },
   standingsIcon: { fontSize: 16 },
 

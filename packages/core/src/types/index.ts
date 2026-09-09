@@ -39,6 +39,8 @@ export interface GameSchedule {
   stadium: string;
   liveState?: LiveState;
   highlight?: string; // 관전포인트 (예: "라이벌 더비", "1위 탈환")
+  round?: string; // 라운드/매치데이 번호 (예: K리그 "28", 챔피언스리그 "1")
+  phaseCode?: string; // UEFA 대회 등에서 쓰는 단계 코드 (예: "LEAGUE" = 리그 페이즈). 국내/유럽 개별 리그는 보통 없음
 
   awayTeamId: string; // 야구 기준 원정팀 (2줄), 축구는 3줄에 표시
   homeTeamId: string; // 야구 기준 홈팀 (3줄), 축구는 2줄에 표시
