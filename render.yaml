@@ -6,6 +6,7 @@ services:
     name: fan-sim-scraper
     runtime: node
     plan: free
+    branch: main
     rootDir: packages/backend/scraper-server
     buildCommand: npm install
     startCommand: npm start
